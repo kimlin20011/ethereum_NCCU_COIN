@@ -1,2 +1,2 @@
-# ethereum_NCCU_COIN
-NCCU_COIN ethereum Homework3
+# HW3-Example
+
