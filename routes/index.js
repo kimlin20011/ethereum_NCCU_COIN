@@ -147,13 +147,17 @@ router.post('/kill', function (req, res, next) {
 router.get('/owner', async function (req, res, next) {
   // TODO
     // get contract owner
+    let bank = new web3.eth.Contract(contract.abi);
+    bank.options.address = req.query.address;
     bank.methods.getOwner().call({
+        from: req.query.account
     })
-        .then((owner) => {
-          console.log(owner);
-          res.send(owner);
-        })
-
+        .then((result) => res.send(result))
+        .catch((err) => res.send(err.toString()));
+/*    let owner = await bank.methods.getOwner().call({ from: req.query.account })
+    res.send({
+        owner: owner,
+    });*/
 
 });
 
@@ -224,13 +228,14 @@ router.post('/transferCoin', function (req, res, next) {
         .on("receipt", function(receipt) {
             result.receipt = receipt;
             result.value= receipt.events.TransferCoinEvent.returnValues.value;
-            //console.log(receipt);
+            console.log(receipt);
             res.send(receipt);
         })
         .on("error", function(error) {
-            result.status = `智能合約buy coin執行失敗`;
+            result.status = `智能合約transferCoin執行失敗`;
             result.error= error.toString();
-            res.send(result);
+            console.log(error);
+            res.send(error);
         });
 });
 
@@ -277,6 +282,39 @@ router.post('/transferTo', async function (req, res, next) {
             res.send(result);
         });
 
+});
+
+//轉帳ETH(進階功能)
+router.post('/transferAdvanced', async function (req, res, next) {
+    let bank = new web3.eth.Contract(contract.abi);
+    bank.options.address = req.body.address;
+    let fromAddress = req.body.account;
+    let toAddress = req.body.to;
+    var transferAmount = await web3.utils.toWei(`${req.body.value}`, 'ether');
+
+    let totalGas=0;
+    await bank.methods.transfer(toAddress, transferAmount).estimateGas({
+        from: fromAddress
+    })
+        .then((gasAmount) => {
+            totalGas = gasAmount;
+        })
+        .catch((err) => {
+            res.send(err.toString())
+        });
+    console.log(`totalGas:${totalGas}`);
+    var realAmount = await web3.utils.toWei(`${transferAmount + totalGas}`, 'wei');
+
+    bank.methods.transfer(toAddress, realAmount).send({
+        from: fromAddress,
+        gas: 340000
+    })
+        .then((result) => {
+            res.send(result)
+        })
+        .catch((err) => {
+            res.send(err.toString())
+        });
 });
 
 module.exports = router;

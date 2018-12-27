@@ -36,11 +36,15 @@ let transferCoinTo = $('#transferCoinTo');
 let transferCoinValue = $('#transferCoinValue');
 let transferCoinButton = $('#transferCoinButton');
 
-//let getOwner = $('#getOwner');
-let getOwnerButton = $('#getOwnerButton');
+let ownerButton = $('#ownerButton');
 
 let transferOwner = $('#transferOwner');
 let transferOwnerButton = $('#transferOwnerButton');
+
+//轉帳ETH(進階功能)
+let transferEtherToAdvanced = $('#transferEtherToAdvanced');
+let transferEtherValAdvanced = $('#transferEtherValAdvanced');
+let transferEtherAdvancedButton = $('#transferEtherAdvancedButton');
 
 let bankAddress = "";
 let nowAccount = "";
@@ -138,7 +142,7 @@ update.on('click', function () {
 			$('#bankBalance').text('銀行ETH餘額 (wei): ')
 		})
 	}
-})
+});
 
 // 當按下刪除合約按鈕時
 killContractButton.on('click', async function () {
@@ -219,7 +223,7 @@ depositButton.on('click', async function () {
 		}
 	})
 
-})
+});
 
 // 當按下提款按鍵時
 withdrawButton.on('click', async function () {
@@ -375,6 +379,25 @@ buyButton.on('click', async function () {
     })
 });
 
+ownerButton.on('click', function () {
+	console.log(`test`)
+    if (bankAddress == '') {
+        return;
+    }
+
+    $.get(
+        '/owner', {
+            address: bankAddress,
+            account: nowAccount
+        },
+        function (result) {
+            $('#ownerText').text('Owner帳戶:' + result);
+            console.log(result);
+        }
+    );
+});
+
+
 // 當按下transferCoin按鍵時
 transferCoinButton.on('click', async function () {
 
@@ -389,16 +412,17 @@ transferCoinButton.on('click', async function () {
     }
 
     // 更新介面
-    waitTransactionStatus()
+    waitTransactionStatus();
     // 轉帳
     $.post('/transferCoin', {
         address: bankAddress,
         account: nowAccount,
-        to: transferCoinTo,
+        to: transferCoinTo.val(),
         value: parseInt(transferCoinValue.val(), 10)
     }, function (result) {
         if (result.events !== undefined) {
-            log(result.events.TransferCoinEvent.returnValues, '轉帳NCCU coin成功')
+        	console.log(result);
+            log(result.events.TransferCoinEvent.returnValues, '轉帳NCCU coin成功');
 
             // 觸發更新帳戶資料
             update.trigger('click');
@@ -410,52 +434,6 @@ transferCoinButton.on('click', async function () {
             log(result);
             // 更新介面
             doneTransactionStatus()
-        }
-    })
-});
-
-
-// 當按下Owner按鈕時
-getOwnerButton.on('click', async function () {
-
-    if (bankAddress == "") {
-        return;
-    }
-
-    // 解鎖
-    let unlock = await unlockAccount();
-    if (!unlock) {
-        return;
-    }
-
-    // 更新介面
-    waitTransactionStatus();
-    // 刪除合約
-    $.get('/owner', {
-        address: bankAddress,
-        //account: nowAccount
-    }, function (owner) {
-        if (owner !== undefined) {
-            log({
-                address: nowAccount,
-                owner: owner,
-            });
-            log('取得owner資料');
-
-            $('#getOwner').text('合約Owner: ' + owner);
-
-
-            // 觸發更新帳戶資料
-            update.trigger('click');
-
-            // 更新介面
-            doneTransactionStatus();
-        }
-        else {
-            log(result)
-            // 更新介面
-            doneTransactionStatus();
-
         }
     })
 });
@@ -480,7 +458,7 @@ transferOwnerButton.on('click', async function () {
     $.post('/transferOwner', {
         address: bankAddress,
         account: nowAccount,
-        newOwner: transferOwner
+        newOwner: transferOwner.val(),
     }, function (result) {
         if (result.events !== undefined) {
             log(result.events.TransferOwnerEvent.returnValues, 'TransferOwner')
@@ -498,6 +476,49 @@ transferOwnerButton.on('click', async function () {
         }
     })
 });
+
+
+//轉帳ETH(進階功能)
+transferEtherAdvancedButton.on('click', async function () {
+    if (bankAddress == '') {
+        return;
+    }
+    // 解鎖
+    let unlock = await unlockAccount();
+    if (!unlock) {
+        return;
+    }
+    // 更新介面
+    waitTransactionStatus();
+    // 轉帳
+    $.post(
+        '/transferAdvanced', {
+            address: bankAddress,
+            account: nowAccount,
+            to: transferEtherToAdvanced.val(),
+            value: parseInt(transferEtherValAdvanced.val(), 10)
+        },
+        function (result) {
+            if (result.events !== undefined) {
+                log(
+                    result.events.TransferEvent.returnValues,
+                    '轉帳ETH(進階功能)成功'
+                );
+
+                // 觸發更新帳戶資料
+                update.trigger('click');
+
+                // 更新介面
+                doneTransactionStatus();
+            } else {
+                log(result);
+                // 更新介面
+                doneTransactionStatus();
+            }
+        }
+    );
+});
+
 
 // TODO
 // 載入bank合約
